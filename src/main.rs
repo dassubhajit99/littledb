@@ -118,10 +118,7 @@ impl Database {
 
     // clear the database
     fn clear(&mut self) {
-        let current_keys = self.list_keys();
-        for key in current_keys {
-            let _ = self.delete(&key);
-        }
+        self.store.clear();
 
         println!("Database is cleared");
     }
