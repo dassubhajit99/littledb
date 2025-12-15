@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    fs::File,
+    fs::{File, OpenOptions},
     io::{self, Read, Write},
     path::Path,
 };
@@ -61,5 +61,49 @@ impl StorageEngine {
 
         println!("✓ Loaded {} entries ({} bytes)", data.len(), buffer.len());
         Ok(data)
+    }
+
+    // Append a single key-value pair to the file (write-ahead log style)
+    // This is more efficient for single writes but we'll improve this later
+    pub fn append(&self, key: &str, value: &Value) -> io::Result<()> {
+        // For now, we'll implement a simple version
+        // In Stage 5, we'll make this a proper write-ahead log
+
+        // Create a single-entry map
+        let mut entry = HashMap::new();
+        entry.insert(key.to_string(), value.clone());
+
+        // Serialize it
+        let encoded = bincode::serialize(&entry)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+
+        // Append to file
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&self.file_path)?;
+
+        file.write_all(&encoded)?;
+        Ok(())
+    }
+
+    // Check if storage file exists
+    pub fn exists(&self) -> bool {
+        Path::new(&self.file_path).exists()
+    }
+
+    // Delete the storage file
+    pub fn delete_file(&self) -> io::Result<()> {
+        if self.exists() {
+            std::fs::remove_file(&self.file_path)?;
+            println!("✓ Deleted storage file");
+        }
+        Ok(())
+    }
+
+    // Get file size in bytes
+    pub fn file_size(&self) -> io::Result<u64> {
+        let metadata = std::fs::metadata(&self.file_path)?;
+        Ok(metadata.len())
     }
 }
