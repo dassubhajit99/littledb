@@ -148,6 +148,17 @@ fn main() {
     // Re-enable auto-save
     db.set_auto_save(true);
 
+    let batch_data_2 = vec![
+        ("product:4".to_string(), Value::String("Laptop".to_string())),
+        ("product:5".to_string(), Value::String("Mouse".to_string())),
+        (
+            "product:6".to_string(),
+            Value::String("Keyboard".to_string()),
+        ),
+    ];
+
+    db.batch_insert(batch_data_2).unwrap();
+
     // Show final stats
     println!("\n--- Final Statistics ---");
     db.stats().print();
