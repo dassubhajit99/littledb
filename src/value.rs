@@ -67,13 +67,13 @@ impl Value {
     // Get the type name as a string (useful for debugging)
     pub fn type_name(&self) -> &str {
         match self {
-            Value::String(_) => "String",
-            Value::Integer(_) => "Integer",
-            Value::Float(_) => "Float",
-            Value::Boolean(_) => "Boolean",
-            Value::Array(_) => "Array",
-            Value::Object(_) => "Object",
-            Value::Null => "Null",
+            Value::String(_) => "STRING",
+            Value::Integer(_) => "INTEGER",
+            Value::Float(_) => "FLOAT",
+            Value::Boolean(_) => "BOOLEAN",
+            Value::Array(_) => "ARRAY",
+            Value::Object(_) => "OBJECT",
+            Value::Null => "NULL",
         }
     }
 }
