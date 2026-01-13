@@ -4,6 +4,7 @@
 
 pub mod condition;
 pub mod database;
+pub mod schema;
 pub mod storage;
 pub mod value;
 
