@@ -6,6 +6,7 @@ pub mod condition;
 pub mod database;
 pub mod schema;
 pub mod storage;
+pub mod table;
 pub mod value;
 
 // Re-export commonly used types for convenience
