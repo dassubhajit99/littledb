@@ -63,4 +63,43 @@ impl Table {
         self.rows.insert(key.clone(), row);
         Ok(key)
     }
+
+    // Get a row by key
+    pub fn get(&self, key: &str) -> Option<&Value> {
+        self.rows.get(key)
+    }
+
+    // Update a row
+    pub fn update(&mut self, key: &str, new_row: Value) -> Result<(), String> {
+        if !self.rows.contains_key(key) {
+            return Err(format!("Row with key '{}' not found", key));
+        }
+        self.schema.validate_row(&new_row)?;
+
+        self.rows.insert(key.to_string(), new_row);
+
+        Ok(())
+    }
+
+    // Delete a row
+    pub fn delete(&mut self, key: &str) -> Result<(), String> {
+        // if !self.rows.contains_key(key) {
+        //     return Err(format!("Row with key '{}' not found", key));
+        // }
+        // self.rows.remove(key);
+
+        if self.rows.remove(key).is_none() {
+            return Err(format!("Row with key '{}' not found", key));
+        }
+
+        Ok(())
+    }
+
+    // Select all rows
+    pub fn select_all_rows(&self) -> Vec<(String, Value)> {
+        self.rows
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect()
+    }
 }
