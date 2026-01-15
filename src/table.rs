@@ -102,4 +102,32 @@ impl Table {
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect()
     }
+
+    // Count rows
+    pub fn count(&self) -> usize {
+        self.rows.len()
+    }
+
+    // Get table statistics
+    pub fn stats(&self) -> TableStats {
+        TableStats {
+            name: self.schema.table_name.clone(),
+            row_count: self.count(),
+            column_count: self.schema.columns.len(),
+        }
+    }
+}
+
+pub struct TableStats {
+    pub name: String,
+    pub row_count: usize,
+    pub column_count: usize,
+}
+
+impl TableStats {
+    pub fn display(&self) {
+        println!("Table: {}", self.name);
+        println!("  Rows: {}", self.row_count);
+        println!("  Columns: {}", self.column_count);
+    }
 }
