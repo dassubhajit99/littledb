@@ -5,6 +5,7 @@
 pub mod condition;
 pub mod database;
 pub mod schema;
+pub mod sql_parser;
 pub mod storage;
 pub mod table;
 pub mod value;
