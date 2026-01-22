@@ -27,6 +27,10 @@ pub enum SqlCommand {
         table_name: String,
         where_clause: Option<WhereClause>,
     },
+
+    DropTable {
+        table_name: String,
+    },
 }
 
 // WHERE clause representation
@@ -80,10 +84,10 @@ impl SqlParser {
         match command_type.as_str() {
             "CREATE" => Self::parse_create_table(sql),
             "INSERT" => Self::parse_insert(sql),
-            // "SELECT" => Self::parse_select(sql),
-            // "UPDATE" => Self::parse_update(sql),
-            // "DELETE" => Self::parse_delete(sql),
-            // "DROP" => Self::parse_drop(sql),
+            "SELECT" => Self::parse_select(sql),
+            "UPDATE" => Self::parse_update(sql),
+            "DELETE" => Self::parse_delete(sql),
+            "DROP" => Self::parse_drop(sql),
             _ => Err(format!("Unknown command: {}", command_type)),
         }
     }
@@ -183,6 +187,7 @@ impl SqlParser {
         if s.to_lowercase() == "true" {
             return Ok(Value::Boolean(true));
         }
+
         if s.to_lowercase() == "false" {
             return Ok(Value::Boolean(false));
         }
@@ -192,7 +197,7 @@ impl SqlParser {
             return Ok(Value::Null);
         }
 
-        // Integer
+        // integer
         if let Ok(i) = s.parse::<i64>() {
             return Ok(Value::Integer(i));
         }
@@ -203,5 +208,162 @@ impl SqlParser {
         }
 
         Err(format!("Cannot parse value: {}", s))
+    }
+
+    // Parse: SELECT * FROM users WHERE age > 25
+    // Parse: SELECT name, age FROM users
+    fn parse_select(sql: &str) -> Result<SqlCommand, String> {
+        let re = Regex::new(r"SELECT\s+(.+?)\s+FROM\s+(\w+)(?:\s+WHERE\s+(.+))?")
+            .map_err(|e| e.to_string())?;
+
+        let caps = re.captures(sql).ok_or("Invalid SELECT syntax")?;
+
+        let columns_str = caps.get(1).ok_or("Missing Columns")?.as_str().trim();
+
+        let table_name = caps
+            .get(2)
+            .ok_or("Missing Table Name")?
+            .as_str()
+            .to_string();
+
+        let where_str = caps.get(3);
+
+        // Parse columns
+        let columns = if columns_str == "*" {
+            Vec::new() // Empty means all columns
+        } else {
+            columns_str
+                .split(",")
+                .map(|s| s.trim().to_string())
+                .collect()
+        };
+
+        // Parse WHERE clause if present
+        let where_clause = if let Some(where_condition) = where_str {
+            Some(Self::parse_where(where_condition.as_str())?)
+        } else {
+            None
+        };
+
+        Ok(SqlCommand::Select {
+            table_name,
+            columns,
+            where_clause,
+        })
+    }
+
+    // Parse WHERE clause: age > 25
+    fn parse_where(where_str: &str) -> Result<WhereClause, String> {
+        let re = Regex::new(r"(\w+)\s*(=|>|<|>=|<=|!=)\s*(.+)").map_err(|e| e.to_string())?;
+
+        let caps = re
+            .captures(where_str)
+            .ok_or(format!("Invalid WHERE clause: {}", where_str))?;
+
+        let column = caps
+            .get(1)
+            .ok_or("Missing column in WHERE")?
+            .as_str()
+            .to_string();
+
+        let operator = caps
+            .get(2)
+            .ok_or("Missing operator in WHERE")?
+            .as_str()
+            .to_string();
+
+        let value_str = caps.get(3).ok_or("Missing value in WHERE")?.as_str();
+
+        let value = Self::parse_value(value_str)?;
+
+        Ok(WhereClause {
+            column,
+            operator,
+            value,
+        })
+    }
+
+    // Parse: UPDATE users SET name = 'Bob' WHERE id = 1
+    fn parse_update(sql: &str) -> Result<SqlCommand, String> {
+        let re = Regex::new(r"UPDATE\s+(\w+)\s+SET\s+(.+?)(?:\s+WHERE\s+(.+))?")
+            .map_err(|e| e.to_string())?;
+
+        let caps = re.captures(sql).ok_or("Invalid UPDATE syntax")?;
+
+        let table_name = caps
+            .get(1)
+            .ok_or("Missing table name")?
+            .as_str()
+            .to_string();
+
+        let set_str = caps.get(2).ok_or("Missing SET clause")?.as_str();
+
+        // Parse SET values
+        let mut set_values = Vec::new();
+
+        for assignment in set_str.split(',') {
+            let parts: Vec<&str> = assignment.split('=').collect();
+            if parts.len() != 2 {
+                return Err(format!("Invalid assignment: {}", assignment));
+            }
+
+            let column = parts[0].trim().to_string();
+            let value = Self::parse_value(parts[1].trim())?;
+
+            set_values.push((column, value));
+        }
+
+        // Parse WHERE clause if present
+        let where_clause = if let Some(where_str) = caps.get(3) {
+            Some(Self::parse_where(where_str.as_str())?)
+        } else {
+            None
+        };
+
+        Ok(SqlCommand::Update {
+            table_name,
+            set_values,
+            where_clause,
+        })
+    }
+
+    // Parse: DELETE FROM users WHERE id = 1
+    fn parse_delete(sql: &str) -> Result<SqlCommand, String> {
+        let re =
+            Regex::new(r"DELETE\s+FROM\s+(\w+)(?:\s+WHERE\s+(.+))?").map_err(|e| e.to_string())?;
+
+        let caps = re.captures(sql).ok_or("Invalid DELETE syntax")?;
+
+        let table_name = caps
+            .get(1)
+            .ok_or("Missing table name")?
+            .as_str()
+            .to_string();
+
+        let where_clause = if let Some(where_str) = caps.get(2) {
+            Some(Self::parse_where(where_str.as_str())?)
+        } else {
+            None
+        };
+
+        Ok(SqlCommand::Delete {
+            table_name,
+            where_clause,
+        })
+    }
+
+    // Parse: DROP TABLE users
+    fn parse_drop(sql: &str) -> Result<SqlCommand, String> {
+        let re = Regex::new(r"DROP\s+TABLE\s+(\w+)").map_err(|e| e.to_string())?;
+
+        let caps = re.captures(sql).ok_or("Invalid DROP TABLE syntax")?;
+
+        let table_name = caps
+            .get(1)
+            .ok_or("Missing table name")?
+            .as_str()
+            .to_string();
+
+        Ok(SqlCommand::DropTable { table_name })
     }
 }
