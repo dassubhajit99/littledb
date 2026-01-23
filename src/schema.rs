@@ -59,12 +59,27 @@ pub struct Column {
 }
 
 impl Column {
-    pub fn new(name: String, data_type: DataType) -> Self {
+    pub fn new(
+        name: String,
+        data_type: DataType,
+        // is_primary: Option<bool>,
+        // is_nullable: Option<bool>,
+    ) -> Self {
         Column {
             name,
             data_type,
-            nullable: true,
+            // primary_key: match is_primary {
+            //     Some(v) => v,
+            //     None => false,
+            // },
+            // nullable: match is_nullable {
+            //     Some(v) => v,
+            //     None => false,
+            // },
+            // primary_key: is_primary.unwrap_or(false), // same as above , in a smarter way
+            // nullable: is_nullable.unwrap_or(false),
             primary_key: false,
+            nullable: false,
         }
     }
     // Create a non-nullable column
@@ -117,9 +132,8 @@ impl Schema {
     }
 
     // Add a column to the schema
-    pub fn add_column(mut self, column: Column) -> Self {
+    pub fn add_column(&mut self, column: Column) {
         self.columns.push(column);
-        self
     }
 
     // Get a column by name
