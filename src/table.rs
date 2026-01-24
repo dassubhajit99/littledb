@@ -23,11 +23,20 @@ impl Table {
         }
     }
 
-    pub fn insert(&mut self, mut row: Value) -> Result<String, String> {
+    pub fn insert(&mut self, key: Option<String>, mut row: Value) -> Result<String, String> {
         // Validate the row against schema
         self.schema.validate_row(&row)?;
 
-        let key = format!("{}:{}", self.schema.table_name, self.next_id);
+        // Generate key if not provided
+        let key = match key {
+            Some(k) => k,
+            None => {
+                // Auto-generate key based on primary key or auto-increment
+                let pk = format!("{}:{}", self.schema.table_name, self.next_id);
+                self.next_id += 1;
+                pk
+            }
+        };
         self.next_id += 1;
 
         // Check whether the schema defines a primary key.
