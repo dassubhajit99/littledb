@@ -10,6 +10,7 @@ use crate::{
 pub struct SqlDatabase {
     tables: HashMap<String, Table>,
 }
+
 impl SqlDatabase {
     pub fn new() -> Self {
         SqlDatabase {
@@ -49,6 +50,35 @@ impl SqlDatabase {
         Ok(QueryResult::Success {
             message: format!("Table '{}' created", table_name),
             rows_affected: 0,
+        })
+    }
+
+    // INSERT
+    pub fn execute_insert(
+        &mut self,
+        table_name: String,
+        columns: Vec<String>,
+        values: Vec<Value>,
+    ) -> Result<QueryResult, String> {
+        let table = self
+            .tables
+            .get_mut(&table_name)
+            .ok_or(format!("Table '{}' does not exist", table_name))?;
+
+        // Build row object
+
+        let mut row_obj = HashMap::new();
+
+        for (col, val) in columns.iter().zip(values.iter()) {
+            row_obj.insert(col.clone(), val.clone());
+        }
+
+        let row = Value::Object(row_obj);
+        table.insert(None, row)?;
+
+        Ok(QueryResult::Success {
+            message: "Row inserted".to_string(),
+            rows_affected: 1,
         })
     }
 }
