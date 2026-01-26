@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 use crate::{
-    Value,
+    Condition, Value,
     schema::{Column, DataType, Schema},
+    sql_parser::WhereClause,
     table::Table,
 };
 
@@ -80,6 +81,87 @@ impl SqlDatabase {
             message: "Row inserted".to_string(),
             rows_affected: 1,
         })
+    }
+
+    pub fn execute_select(
+        &mut self,
+        table_name: String,
+        columns: Vec<String>,
+        where_clause: Option<WhereClause>,
+    ) -> Result<QueryResult, String> {
+        let table = self
+            .tables
+            .get(&table_name)
+            .ok_or(format!("Table '{}' does not exist", table_name))?;
+
+        // Get matching rows
+        let rows = if let Some(where_clause) = where_clause {
+            let condition = Self::where_to_condition(where_clause)?;
+            table.select_where(condition)
+        } else {
+            table.select_all()
+        };
+
+        // Filter columns if specific columns requested
+        let filtered_rows = if columns.is_empty() {
+            // SELECT * - return all columns
+            rows
+        } else {
+            rows.into_iter()
+                .map(|(key, value)| {
+                    if let Value::Object(obj) = value {
+                        let filtered_obj: HashMap<String, Value> = obj
+                            .into_iter()
+                            .filter(|(k, _)| columns.contains(k))
+                            .collect();
+                        (key, Value::Object(filtered_obj))
+                    } else {
+                        (key, value)
+                    }
+                })
+                .collect()
+        };
+        let row_count = filtered_rows.len();
+        Ok(QueryResult::Select {
+            rows: filtered_rows,
+            row_count: row_count,
+        })
+    }
+
+    // Convert WHERE clause to Condition
+    fn where_to_condition(where_clause: WhereClause) -> Result<Condition, String> {
+        match where_clause.operator.as_str() {
+            "=" => Ok(Condition::Equals(where_clause.column, where_clause.value)),
+            ">" => {
+                if let Value::Integer(i) = where_clause.value {
+                    Ok(Condition::GreaterThan(where_clause.column, i))
+                } else {
+                    Err("Operator '>' requires integer value".to_string())
+                }
+            }
+            "<" => {
+                if let Value::Integer(i) = where_clause.value {
+                    Ok(Condition::LessThan(where_clause.column, i))
+                } else {
+                    Err("Operator '<' requires integer value".to_string())
+                }
+            }
+            ">=" => {
+                if let Value::Integer(i) = where_clause.value {
+                    Ok(Condition::GreaterOrEqual(where_clause.column, i))
+                } else {
+                    Err("Operator '>=' requires integer value".to_string())
+                }
+            }
+            "<=" => {
+                if let Value::Integer(i) = where_clause.value {
+                    Ok(Condition::LessOrEqual(where_clause.column, i))
+                } else {
+                    Err("Operator '<=' requires integer value".to_string())
+                }
+            }
+            _ => Err(format!("Unsupported operator: {}", where_clause.operator)),
+        }
     }
 }
 
