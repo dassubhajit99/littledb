@@ -7,6 +7,8 @@ pub enum Condition {
     LessThan(String, i64),    // field < value
     Contains(String, String), // string field contains substring
     Between(String, i64, i64),
+    GreaterOrEqual(String, i64),
+    LessOrEqual(String, i64),
 }
 
 impl Condition {
@@ -49,6 +51,22 @@ impl Condition {
                 if let Some(actual) = value.get_field(field) {
                     if let Some(num) = actual.as_integer() {
                         return num >= *min && num <= *max;
+                    }
+                }
+                false
+            }
+            Condition::GreaterOrEqual(field, threshold) => {
+                if let Some(actual) = value.get_field(field) {
+                    if let Some(num) = actual.as_integer() {
+                        return num >= *threshold;
+                    }
+                }
+                false
+            }
+            Condition::LessOrEqual(field, threshold) => {
+                if let Some(actual) = value.get_field(field) {
+                    if let Some(num) = actual.as_integer() {
+                        return num <= *threshold;
                     }
                 }
                 false
