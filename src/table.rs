@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Value, schema::Schema};
+use crate::{Condition, Value, schema::Schema};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Table {
@@ -105,9 +105,27 @@ impl Table {
     }
 
     // Select all rows
-    pub fn select_all_rows(&self) -> Vec<(String, Value)> {
+    pub fn select_all(&self) -> Vec<(String, Value)> {
         self.rows
             .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect()
+    }
+
+    // Select rows matching a condition
+    pub fn select_where(&self, condition: Condition) -> Vec<(String, Value)> {
+        self.rows
+            .iter()
+            .filter(|(_k, v)| condition.matches(v))
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect()
+    }
+
+    // Select rows with multiple conditions (AND)
+    pub fn select_where_multiple(&self, conditions: Vec<Condition>) -> Vec<(String, Value)> {
+        self.rows
+            .iter()
+            .filter(|(_k, v)| conditions.iter().all(|c| c.matches(v)))
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect()
     }
