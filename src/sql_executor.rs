@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     Condition, Value,
     schema::{Column, DataType, Schema},
-    sql_parser::WhereClause,
+    sql_parser::{SqlCommand, WhereClause},
     table::Table,
 };
 
@@ -19,8 +19,42 @@ impl SqlDatabase {
         }
     }
 
+    // Execute a SQL command
+    pub fn execute(&mut self, sql: &str) -> Result<QueryResult, String> {
+        // Parse the SQL
+        let command = crate::sql_parser::SqlParser::parse(sql)?;
+
+        // Execute based on command type
+        match command {
+            SqlCommand::CreateTable {
+                table_name,
+                columns,
+            } => self.execute_create_table(table_name, columns),
+            SqlCommand::Insert {
+                table_name,
+                columns,
+                values,
+            } => self.execute_insert(table_name, columns, values),
+            SqlCommand::Select {
+                table_name,
+                columns,
+                where_clause,
+            } => self.execute_select(table_name, columns, where_clause),
+            SqlCommand::Update {
+                table_name,
+                set_values,
+                where_clause,
+            } => self.execute_update(table_name, set_values, where_clause),
+            SqlCommand::Delete {
+                table_name,
+                where_clause,
+            } => self.execute_delete(table_name, where_clause),
+            SqlCommand::DropTable { table_name } => self.execute_drop_table(table_name),
+        }
+    }
+
     // CREATE TABLE
-    pub fn execute_create_table(
+    fn execute_create_table(
         &mut self,
         table_name: String,
         columns: Vec<(String, DataType, bool, bool)>,
@@ -55,7 +89,7 @@ impl SqlDatabase {
     }
 
     // INSERT
-    pub fn execute_insert(
+    fn execute_insert(
         &mut self,
         table_name: String,
         columns: Vec<String>,
@@ -83,7 +117,7 @@ impl SqlDatabase {
         })
     }
 
-    pub fn execute_select(
+    fn execute_select(
         &mut self,
         table_name: String,
         columns: Vec<String>,
@@ -128,6 +162,100 @@ impl SqlDatabase {
         })
     }
 
+    // UPDATE
+    fn execute_update(
+        &mut self,
+        table_name: String,
+        set_values: Vec<(String, Value)>,
+        where_clause: Option<WhereClause>,
+    ) -> Result<QueryResult, String> {
+        let table = self
+            .tables
+            .get_mut(&table_name)
+            .ok_or(format!("Table '{}' does not exist", table_name))?;
+
+        // Find rows to update
+        // Find rows to update
+        let keys_to_update: Vec<String> = if let Some(where_clause) = where_clause {
+            let condition = Self::where_to_condition(where_clause)?;
+            table
+                .select_where(condition)
+                .into_iter()
+                .map(|(k, _)| k)
+                .collect()
+        } else {
+            table.select_all().into_iter().map(|(k, _)| k).collect()
+        };
+
+        let mut updated = 0;
+
+        // Update each row
+        for key in keys_to_update {
+            if let Some(Value::Object(mut obj)) = table.get(&key).cloned() {
+                // Apply updates
+                for (col, val) in &set_values {
+                    obj.insert(col.clone(), val.clone());
+                }
+
+                table.update(&key, Value::Object(obj))?;
+                updated += 1;
+            }
+        }
+
+        Ok(QueryResult::Success {
+            message: format!("Updated {} row(s)", updated),
+            rows_affected: updated,
+        })
+    }
+
+    // DELETE
+    fn execute_delete(
+        &mut self,
+        table_name: String,
+        where_clause: Option<WhereClause>,
+    ) -> Result<QueryResult, String> {
+        let table = self
+            .tables
+            .get_mut(&table_name)
+            .ok_or(format!("Table '{}' does not exist", table_name))?;
+
+        // Find rows to delete
+        let keys_to_delete: Vec<String> = if let Some(where_clause) = where_clause {
+            let condition = Self::where_to_condition(where_clause)?;
+            table
+                .select_where(condition)
+                .into_iter()
+                .map(|(k, _)| k)
+                .collect()
+        } else {
+            table.select_all().into_iter().map(|(k, _)| k).collect()
+        };
+
+        let count = keys_to_delete.len();
+
+        // Delete each row
+        for key in keys_to_delete {
+            table.delete(&key)?;
+        }
+
+        Ok(QueryResult::Success {
+            message: format!("Deleted {} row(s)", count),
+            rows_affected: count,
+        })
+    }
+
+    // DROP TABLE
+    fn execute_drop_table(&mut self, table_name: String) -> Result<QueryResult, String> {
+        if self.tables.remove(&table_name).is_none() {
+            return Err(format!("Table '{}' does not exist", table_name));
+        }
+
+        Ok(QueryResult::Success {
+            message: format!("Table '{}' dropped", table_name),
+            rows_affected: 0,
+        })
+    }
+
     // Convert WHERE clause to Condition
     fn where_to_condition(where_clause: WhereClause) -> Result<Condition, String> {
         match where_clause.operator.as_str() {
@@ -162,6 +290,16 @@ impl SqlDatabase {
             }
             _ => Err(format!("Unsupported operator: {}", where_clause.operator)),
         }
+    }
+
+    // Get a table
+    pub fn get_table(&self, name: &str) -> Option<&Table> {
+        self.tables.get(name)
+    }
+
+    // List all table names
+    pub fn list_tables(&self) -> Vec<String> {
+        self.tables.keys().cloned().collect()
     }
 }
 
