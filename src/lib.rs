@@ -15,5 +15,8 @@ pub mod value;
 // This allows users to write: use littledb::Database instead of use littledb::database::Database
 pub use condition::Condition;
 pub use database::Database;
+pub use schema::{Column, DataType, Schema};
+pub use sql_executor::{QueryResult, SqlDatabase};
 pub use storage::StorageEngine;
+pub use table::Table;
 pub use value::Value;
