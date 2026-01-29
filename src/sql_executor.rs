@@ -108,8 +108,7 @@ impl SqlDatabase {
             row_obj.insert(col.clone(), val.clone());
         }
 
-        let row = Value::Object(row_obj);
-        table.insert(None, row)?;
+        table.insert(None, row_obj)?;
 
         Ok(QueryResult::Success {
             message: "Row inserted".to_string(),

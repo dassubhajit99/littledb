@@ -23,10 +23,11 @@ impl Table {
         }
     }
 
-    pub fn insert(&mut self, key: Option<String>, mut row: Value) -> Result<String, String> {
-        // Validate the row against schema
-        self.schema.validate_row(&row)?;
-
+    pub fn insert(
+        &mut self,
+        key: Option<String>,
+        mut row_obj: HashMap<String, Value>,
+    ) -> Result<String, String> {
         // Generate key if not provided
         let key = match key {
             Some(k) => k,
@@ -37,7 +38,14 @@ impl Table {
                 pk
             }
         };
+        row_obj.insert("id".to_string(), Value::Integer(self.next_id));
+
         self.next_id += 1;
+
+        let mut row = Value::Object(row_obj);
+
+        // Validate the row against schema
+        self.schema.validate_row(&row)?;
 
         // Check whether the schema defines a primary key.
         // `primary_key()` returns `Option<...>`, so this safely handles the case
