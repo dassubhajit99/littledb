@@ -338,11 +338,25 @@ impl QueryResult {
                     for (key, value) in rows {
                         if let Value::Object(obj) = value {
                             print!("[{}] ", key);
-                            let items: Vec<String> = obj
-                                .iter()
-                                .map(|(k, v)| format!("{}: {}", k, v.to_string()))
-                                .collect();
-                            println!("{}", items.join(", "));
+
+                            let mut parts = Vec::new();
+
+                            if let Some(id) = obj.get("id") {
+                                parts.push(format!("id: {}", id.to_string()));
+                            }
+
+                            let mut keys: Vec<_> =
+                                obj.keys().filter(|k| k.as_str() != "id").collect();
+
+                            keys.sort();
+
+                            for key in keys {
+                                if let Some(value) = obj.get(key) {
+                                    parts.push(format!("{}: {}", key, value.to_string()));
+                                }
+                            }
+
+                            println!("{}", parts.join(", "));
                         }
                     }
                 }
