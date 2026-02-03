@@ -34,7 +34,6 @@ impl Table {
             None => {
                 // Auto-generate key based on primary key or auto-increment
                 let pk = format!("{}:{}", self.schema.table_name, self.next_id);
-                self.next_id += 1;
                 pk
             }
         };
