@@ -41,4 +41,84 @@ fn main() {
             Err(e) => println!("✗ Error: {}", e),
         }
     }
+
+    // SELECT ALL
+    println!("\n--- SELECT * FROM users ---");
+    match db.execute("SELECT * FROM users") {
+        Ok(result) => result.display(),
+        Err(e) => println!("✗ Error: {}", e),
+    }
+
+    println!("\n--- SELECT * FROM products ---");
+    match db.execute("SELECT * FROM products") {
+        Ok(result) => result.display(),
+        Err(e) => println!("✗ Error: {}", e),
+    }
+
+    // SELECT SPECIFIC COLUMNS
+    println!("\n--- SELECT name, age FROM users ---");
+    match db.execute("SELECT name, age FROM users") {
+        Ok(result) => result.display(),
+        Err(e) => println!("✗ Error: {}", e),
+    }
+
+    // SELECT WITH WHERE
+    println!("\n--- SELECT * FROM users WHERE age > 28 ---");
+    match db.execute("SELECT * FROM users WHERE age > 28") {
+        Ok(result) => result.display(),
+        Err(e) => println!("✗ Error: {}", e),
+    }
+
+    println!("\n--- SELECT * FROM users WHERE age < 30 ---");
+    match db.execute("SELECT * FROM users WHERE age < 30") {
+        Ok(result) => result.display(),
+        Err(e) => println!("✗ Error: {}", e),
+    }
+
+    // UPDATE
+    println!("\n--- UPDATE users SET age = 31 WHERE name = 'Alice' ---");
+    match db.execute("UPDATE users SET age = 31 WHERE name = 'Alice'") {
+        Ok(result) => result.display(),
+        Err(e) => println!("✗ Error: {}", e),
+    }
+
+    // Verify update
+    println!("\n--- Verifying Update: SELECT * FROM users WHERE name = 'Alice' ---");
+    match db.execute("SELECT * FROM users WHERE name = 'Alice'") {
+        Ok(result) => result.display(),
+        Err(e) => println!("✗ Error: {}", e),
+    }
+
+    // SELECT FROM products
+    println!("\n--- SELECT * FROM products ---");
+    match db.execute("SELECT * FROM products") {
+        Ok(result) => result.display(),
+        Err(e) => println!("✗ Error: {}", e),
+    }
+
+    // UPDATE products
+    println!("\n--- UPDATE products SET price = 899.99 WHERE name = 'Laptop' ---");
+    match db.execute("UPDATE products SET price = 899.99 WHERE name = 'Laptop'") {
+        Ok(result) => result.display(),
+        Err(e) => println!("✗ Error: {}", e),
+    }
+
+    // DELETE
+    println!("\n--- DELETE FROM users WHERE age < 27 ---");
+    match db.execute("DELETE FROM users WHERE age < 27") {
+        Ok(result) => result.display(),
+        Err(e) => println!("✗ Error: {}", e),
+    }
+
+    // Verify delete
+    println!("\n--- After Delete: SELECT * FROM users ---");
+    match db.execute("SELECT * FROM users") {
+        Ok(result) => result.display(),
+        Err(e) => println!("✗ Error: {}", e),
+    }
+
+    // List all tables
+    println!("\n--- All Tables in Database ---");
+    let tables = db.list_tables();
+    println!("Tables: {:?}", tables);
 }
